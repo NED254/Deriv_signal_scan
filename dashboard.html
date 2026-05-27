@@ -1,0 +1,944 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Venom — Free Deriv Signals</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Exo+2:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0b0d11;--s0:#0f1117;--s1:#13161e;--s2:#181c27;
+  --b:#1e2433;--b2:#252d3d;
+  --v:#7fff00;--v2:#5ecc00;--vd:rgba(127,255,0,0.08);--vg:rgba(127,255,0,0.3);--vg2:rgba(127,255,0,0.12);
+  --red:#f43f5e;--amb:#f59e0b;--sky:#38bdf8;--mu:#4b5673;--tx:#b8c4d8;--wh:#eef2ff;
+  --mono:'Share Tech Mono',monospace;--disp:'Orbitron',sans-serif;--body:'Exo 2',sans-serif;
+}
+html,body{height:100%;overflow:hidden}
+body{background:var(--bg);color:var(--tx);font-family:var(--body);font-size:13px;display:flex;flex-direction:column}
+
+/* ── Grid BG ── */
+#bg-grid{position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(127,255,0,.018) 1px,transparent 1px),linear-gradient(90deg,rgba(127,255,0,.018) 1px,transparent 1px);
+  background-size:44px 44px;animation:bgScroll 30s linear infinite}
+@keyframes bgScroll{to{background-position:44px 44px}}
+
+/* ══════════════════════════════════════
+   LOGIN OVERLAY
+══════════════════════════════════════ */
+#login-overlay{
+  position:fixed;inset:0;z-index:1000;
+  background:rgba(7,10,17,0.97);
+  display:flex;align-items:center;justify-content:center;
+  backdrop-filter:blur(8px);
+}
+.login-box{
+  background:var(--s1);border:1px solid rgba(127,255,0,0.25);
+  border-radius:16px;padding:40px 44px;width:100%;max-width:420px;
+  position:relative;
+  box-shadow:0 0 60px rgba(127,255,0,0.08),0 24px 48px rgba(0,0,0,0.6);
+}
+.login-box::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg,transparent,var(--v),transparent);
+  border-radius:16px 16px 0 0;
+}
+.login-logo{display:flex;align-items:center;gap:12px;justify-content:center;margin-bottom:28px}
+.login-title{font-family:var(--disp);font-size:22px;font-weight:900;letter-spacing:3px;color:var(--v);text-shadow:0 0 20px var(--vg)}
+.login-sub{font-family:var(--mono);font-size:9px;letter-spacing:3px;color:var(--mu);text-transform:uppercase}
+.login-heading{font-family:var(--disp);font-size:13px;font-weight:700;color:var(--wh);letter-spacing:1px;margin-bottom:6px;text-align:center}
+.login-desc{font-family:var(--mono);font-size:10px;color:var(--mu);text-align:center;margin-bottom:28px;line-height:1.6}
+.form-group{margin-bottom:16px}
+.form-label{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase;display:block;margin-bottom:6px}
+.form-input{
+  width:100%;background:var(--s0);border:1px solid var(--b2);
+  color:var(--wh);font-family:var(--mono);font-size:12px;
+  border-radius:7px;padding:10px 14px;outline:none;
+  transition:border-color .2s,box-shadow .2s;
+}
+.form-input:focus{border-color:var(--v);box-shadow:0 0 0 2px var(--vg2)}
+.form-input::placeholder{color:var(--mu)}
+.login-btn{
+  width:100%;padding:13px;
+  background:linear-gradient(135deg,var(--v),var(--v2));
+  color:#000;font-family:var(--disp);font-weight:700;font-size:11px;
+  letter-spacing:2px;border:none;border-radius:7px;cursor:pointer;
+  box-shadow:0 0 20px var(--vg);transition:all .2s;margin-top:8px;
+}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 0 30px var(--vg)}
+.login-btn:active{transform:none}
+.login-btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
+.login-error{
+  background:rgba(244,63,94,0.1);border:1px solid rgba(244,63,94,0.3);
+  border-radius:6px;padding:9px 12px;
+  font-family:var(--mono);font-size:10px;color:var(--red);
+  margin-bottom:14px;display:none;
+}
+.login-divider{display:flex;align-items:center;gap:12px;margin:20px 0}
+.login-divider::before,.login-divider::after{content:'';flex:1;height:1px;background:var(--b2)}
+.login-divider span{font-family:var(--mono);font-size:9px;color:var(--mu);letter-spacing:2px}
+.oauth-btn{
+  width:100%;padding:11px;
+  background:var(--s0);border:1px solid var(--b2);
+  color:var(--tx);font-family:var(--mono);font-size:11px;
+  border-radius:7px;cursor:pointer;display:flex;align-items:center;
+  justify-content:center;gap:10px;transition:all .2s;letter-spacing:1px;
+}
+.oauth-btn:hover{border-color:var(--v);color:var(--v);background:var(--vd)}
+.login-footer{font-family:var(--mono);font-size:9px;color:var(--mu);text-align:center;margin-top:20px;line-height:1.7}
+.login-footer a{color:var(--v);text-decoration:none}
+.login-footer a:hover{text-decoration:underline}
+.spin{display:inline-block;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ══════════════════════════════════════
+   MAIN APP (hidden until logged in)
+══════════════════════════════════════ */
+#app{display:none;flex-direction:column;height:100%;position:relative;z-index:1}
+
+/* HEADER */
+#hdr{height:52px;background:var(--s0);border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;padding:0 16px 0 0;flex-shrink:0}
+.logo-area{display:flex;align-items:center;height:100%;padding:0 18px;border-right:1px solid var(--b);gap:10px;min-width:220px}
+.logo-text{font-family:var(--disp);font-size:16px;font-weight:900;letter-spacing:3px;color:var(--v);text-shadow:0 0 16px var(--vg);line-height:1}
+.logo-sub{font-family:var(--mono);font-size:8px;letter-spacing:3px;color:var(--mu);text-transform:uppercase;margin-top:2px}
+.hdr-mid{display:flex;align-items:center;gap:4px;padding:0 16px;flex:1}
+.hdr-link{display:flex;align-items:center;gap:6px;padding:6px 12px;font-size:12px;color:var(--mu);cursor:pointer;border-radius:5px;transition:all .2s;background:none;border:none;font-family:var(--body)}
+.hdr-link:hover{color:var(--tx);background:var(--s2)}
+.hdr-right{display:flex;align-items:center;gap:10px}
+.balance-box{display:flex;align-items:center;gap:8px;background:var(--s1);border:1px solid var(--b2);border-radius:6px;padding:5px 12px;font-family:var(--mono);font-size:12px;cursor:default}
+.balance-amt{color:var(--v);font-weight:600;letter-spacing:1px}
+.currency-sel{background:var(--s1);border:1px solid var(--b2);color:var(--tx);font-family:var(--mono);font-size:11px;border-radius:5px;padding:4px 8px;cursor:pointer;outline:none}
+.currency-sel:focus{border-color:var(--v)}
+.dep-btn{background:linear-gradient(135deg,var(--v),var(--v2));color:#000;font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:1.5px;border:none;border-radius:6px;padding:7px 14px;cursor:pointer;box-shadow:0 0 14px var(--vg);transition:all .2s;white-space:nowrap}
+.dep-btn:hover{box-shadow:0 0 24px var(--vg);transform:translateY(-1px)}
+.logout-btn{background:none;border:1px solid var(--b2);color:var(--mu);font-family:var(--mono);font-size:10px;letter-spacing:1px;border-radius:5px;padding:6px 12px;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:6px}
+.logout-btn:hover{border-color:var(--red);color:var(--red)}
+
+/* NAV */
+#nav{height:48px;background:var(--s1);border-bottom:2px solid var(--b2);display:flex;align-items:stretch;flex-shrink:0;overflow-x:auto}
+#nav::-webkit-scrollbar{display:none}
+.nav-item{display:flex;align-items:center;gap:7px;padding:0 15px;font-size:12px;font-weight:500;color:var(--mu);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;white-space:nowrap;transition:all .2s;background:none;border-left:none;border-right:none;border-top:none;font-family:var(--body)}
+.nav-item:hover{color:var(--tx);background:var(--vd)}
+.nav-item.active{color:var(--v);border-bottom:2px solid var(--v);background:var(--vd);font-weight:600}
+
+/* BODY WRAP */
+#body-wrap{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+#sidebar{width:220px;flex-shrink:0;background:var(--s0);border-right:1px solid var(--b);display:flex;flex-direction:column;overflow-y:auto}
+#sidebar::-webkit-scrollbar{width:3px}
+#sidebar::-webkit-scrollbar-thumb{background:var(--b2)}
+.sb-sec{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase;padding:14px 16px 6px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:9px 16px;font-size:12px;color:var(--tx);cursor:pointer;border-left:2px solid transparent;transition:all .2s;background:none;border-right:none;border-top:none;border-bottom:none;width:100%;text-align:left;font-family:var(--body)}
+.sb-item:hover{background:var(--s1);color:var(--wh)}
+.sb-item.active{background:var(--vd);color:var(--v);border-left:2px solid var(--v)}
+.sb-div{height:1px;background:var(--b);margin:6px 0}
+.sb-mkt{margin:4px 10px;background:var(--s1);border:1px solid var(--b);border-radius:6px;padding:8px 10px;cursor:pointer;transition:all .25s}
+.sb-mkt:hover{border-color:var(--b2)}
+.sb-mkt.sb-best{border-color:rgba(127,255,0,.3);background:rgba(127,255,0,.04)}
+.sb-mkt.sb-sig{border-color:rgba(245,158,11,.3)}
+.sb-mkt-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+.sb-mkt-name{font-family:var(--disp);font-size:11px;color:var(--wh)}
+.sb-mkt-score{font-family:var(--mono);font-size:9px;color:var(--mu)}
+.sb-mkt-score.hot{color:var(--amb)}
+.sb-bar{height:3px;background:var(--b);border-radius:2px;overflow:hidden}
+.sb-bar-fill{height:100%;background:linear-gradient(90deg,var(--sky),var(--red));border-radius:2px;transition:width .6s}
+.sb-mkt-sig{font-family:var(--mono);font-size:9px;color:var(--amb);margin-top:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sb-conn-lbl{font-family:var(--mono);font-size:9px;color:var(--mu);padding:6px 0;text-align:center}
+
+/* MAIN */
+#main{flex:1;overflow-y:auto;overflow-x:hidden;background:var(--bg);display:flex;flex-direction:column}
+#main::-webkit-scrollbar{width:4px}
+#main::-webkit-scrollbar-thumb{background:var(--b2)}
+
+/* TOOLBAR */
+#toolbar{background:var(--s1);border-bottom:1px solid var(--b);display:flex;align-items:center;gap:3px;padding:6px 12px;flex-shrink:0}
+.tb-btn{width:28px;height:28px;border-radius:4px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--mu);border:1px solid transparent;transition:all .2s;background:none}
+.tb-btn:hover{background:var(--s2);color:var(--tx);border-color:var(--b2)}
+.tb-sep{width:1px;height:20px;background:var(--b);margin:0 4px}
+
+/* DASHBOARD */
+#dash{padding:16px;flex:1}
+
+.hero-strip{background:linear-gradient(135deg,rgba(127,255,0,.07) 0%,var(--s1) 50%,var(--s0) 100%);border:1px solid rgba(127,255,0,.2);border-radius:10px;padding:20px 24px;display:grid;grid-template-columns:1fr 1fr 1fr auto;align-items:center;gap:20px;margin-bottom:16px;position:relative;overflow:hidden}
+.hero-strip::before{content:'';position:absolute;top:-30px;left:-30px;width:160px;height:160px;background:radial-gradient(circle,rgba(127,255,0,.12) 0%,transparent 70%);pointer-events:none}
+.hero-block{display:flex;flex-direction:column;gap:3px}
+.hero-lbl{font-family:var(--mono);font-size:9px;letter-spacing:2.5px;color:var(--mu);text-transform:uppercase}
+.hero-val{font-family:var(--disp);font-size:28px;font-weight:900;color:var(--v);letter-spacing:1px;line-height:1;text-shadow:0 0 20px var(--vg)}
+.hero-sig{font-size:14px;font-weight:600;color:var(--amb);letter-spacing:.5px}
+.hero-meta{font-family:var(--mono);font-size:10px;color:var(--mu)}
+.score-ring{width:80px;height:80px;border-radius:50%;border:2px solid rgba(127,255,0,.25);display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(circle,rgba(127,255,0,.06),transparent 70%);box-shadow:0 0 20px var(--vg2)}
+.score-num{font-family:var(--disp);font-size:24px;font-weight:900;color:var(--v);line-height:1}
+.score-lbl{font-family:var(--mono);font-size:8px;letter-spacing:1px;color:var(--mu);margin-top:2px}
+
+.stats-row{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:16px}
+.stat-tile{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:12px 14px;display:flex;flex-direction:column;gap:3px;position:relative;overflow:hidden;transition:border-color .25s,transform .2s}
+.stat-tile:hover{border-color:var(--b2);transform:translateY(-2px)}
+.st-ico{position:absolute;right:12px;top:12px;color:var(--b2)}
+.st-lbl{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase}
+.st-val{font-family:var(--disp);font-size:20px;font-weight:700;line-height:1.1}
+.g{color:var(--v)}.a{color:var(--amb)}.sk{color:var(--sky)}.w{color:var(--wh)}
+.st-sub{font-family:var(--mono);font-size:9px;color:var(--mu)}
+
+.sec-head{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.sec-title{font-family:var(--mono);font-size:10px;letter-spacing:2.5px;color:var(--tx);text-transform:uppercase;font-weight:600}
+.sec-line{flex:1;height:1px;background:var(--b)}
+.sec-tag{font-family:var(--mono);font-size:9px;color:var(--mu);border:1px solid var(--b);border-radius:10px;padding:2px 8px}
+
+.mkt-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px;margin-bottom:16px}
+.mcard{background:var(--s1);border:1px solid var(--b);border-radius:8px;padding:14px;position:relative;overflow:hidden;transition:all .25s}
+.mcard:hover{border-color:var(--b2);transform:translateY(-2px);box-shadow:0 8px 24px rgba(0,0,0,.35)}
+.mcard.best{border-color:rgba(127,255,0,.4);box-shadow:0 0 20px rgba(127,255,0,.08)}
+.mcard.signalled{border-color:rgba(245,158,11,.35)}
+.mcard::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:transparent;transition:.3s}
+.mcard.best::before{background:linear-gradient(90deg,transparent,var(--v),transparent)}
+.mcard.signalled::before{background:linear-gradient(90deg,transparent,var(--amb),transparent)}
+.mc-head{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px}
+.mc-name{font-family:var(--disp);font-size:15px;font-weight:700;color:var(--wh)}
+.mc-badge{font-family:var(--mono);font-size:9px;padding:2px 7px;border-radius:3px;background:var(--s0);border:1px solid var(--b);color:var(--mu)}
+.mc-badge.hot{border-color:rgba(245,158,11,.4);color:var(--amb);background:rgba(245,158,11,.08)}
+.mc-badge.best-b{border-color:rgba(127,255,0,.4);color:var(--v);background:var(--vd)}
+.d-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:2px;margin-bottom:10px}
+.dc{display:flex;flex-direction:column;align-items:center;padding:4px 1px;border-radius:3px;background:var(--s0);border:1px solid transparent;transition:.35s}
+.dc-n{font-family:var(--mono);font-size:7px;color:var(--mu);line-height:1}
+.dc-p{font-family:var(--mono);font-size:8px;font-weight:600;color:var(--tx);line-height:1;margin-top:2px}
+.dc.hot{background:rgba(245,158,11,.1);border-color:rgba(245,158,11,.25)}.dc.hot .dc-p{color:var(--amb)}
+.dc.cold{background:rgba(56,189,248,.08);border-color:rgba(56,189,248,.2)}.dc.cold .dc-p{color:var(--sky)}
+.dc.last-d{background:rgba(127,255,0,.08);border-color:rgba(127,255,0,.3)}.dc.last-d .dc-p{color:var(--v)}
+.ou-row{margin-bottom:8px}
+.ou-lbls{display:flex;justify-content:space-between;margin-bottom:4px}
+.ou-l{font-family:var(--mono);font-size:9px;font-weight:600}
+.ou-l.u{color:var(--sky)}.ou-l.o{color:var(--red)}
+.ou-track{height:4px;background:var(--s0);border-radius:2px;overflow:hidden}
+.ou-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--sky),var(--red));transition:width .7s}
+.mc-last{font-family:var(--mono);font-size:10px;color:var(--mu);margin-bottom:6px}
+.mc-last strong{color:var(--wh);font-size:15px}
+.mc-sig{display:none;font-family:var(--mono);font-size:10px;font-weight:600;color:var(--amb);background:rgba(245,158,11,.08);border:1px solid rgba(245,158,11,.25);border-radius:4px;padding:4px 8px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;animation:sigBlink 2.5s ease-in-out infinite}
+@keyframes sigBlink{0%,100%{box-shadow:none}50%{box-shadow:0 0 10px rgba(245,158,11,.25)}}
+.mc-conn{font-family:var(--mono);font-size:10px;color:var(--mu);text-align:center;padding:20px 0}
+
+.bot-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:16px}
+.panel{background:var(--s1);border:1px solid var(--b);border-radius:8px;overflow:hidden}
+.panel-head{display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-bottom:1px solid var(--b);background:var(--s0)}
+.panel-title{font-family:var(--mono);font-size:9px;letter-spacing:2px;color:var(--mu);text-transform:uppercase}
+.panel-tag{font-family:var(--mono);font-size:9px;color:var(--v);display:flex;align-items:center;gap:5px}
+.live-dot{width:6px;height:6px;border-radius:50%;background:var(--v);animation:sbPulse 1.8s ease-in-out infinite}
+.panel-body{padding:12px 14px;max-height:200px;overflow-y:auto}
+.panel-body::-webkit-scrollbar{width:3px}
+.panel-body::-webkit-scrollbar-thumb{background:var(--b2)}
+.d-dist{display:flex;flex-wrap:wrap;gap:5px}
+.dd-chip{font-family:var(--mono);font-size:10px;padding:4px 9px;border-radius:4px;background:var(--s0);border:1px solid var(--b);color:var(--tx)}
+.dd-chip.low{color:var(--sky);border-color:rgba(56,189,248,.25);background:rgba(56,189,248,.06)}
+.dd-chip.high{color:var(--red);border-color:rgba(244,63,94,.2);background:rgba(244,63,94,.05)}
+.dd-chip.hot-d{color:var(--amb);border-color:rgba(245,158,11,.3);background:rgba(245,158,11,.06)}
+.sh-row{display:grid;grid-template-columns:70px 60px 1fr;gap:8px;align-items:center;padding:7px 0;border-bottom:1px solid var(--b);font-family:var(--mono);font-size:10px;animation:rowIn .3s ease-out}
+@keyframes rowIn{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.sh-row:last-child{border-bottom:none}
+.sh-time{color:var(--mu)}.sh-mkt{color:var(--sky);font-weight:600}.sh-sig{color:var(--amb)}
+
+.tbl{width:100%;border-collapse:collapse;font-size:11px}
+.tbl th{font-family:var(--mono);font-size:8px;letter-spacing:1.5px;text-transform:uppercase;color:var(--mu);padding:8px 10px;text-align:left;border-bottom:1px solid var(--b);background:var(--s0)}
+.tbl td{padding:8px 10px;border-bottom:1px solid var(--b);color:var(--tx);font-family:var(--mono);font-size:10px;transition:background .2s}
+.tbl tr:hover td{background:var(--s2)}
+.tbl tr:last-child td{border-bottom:none}
+.tl-mkt{color:var(--sky);font-weight:600}
+.tag{display:inline-block;padding:2px 6px;border-radius:3px;font-size:9px}
+.tag.rise{background:rgba(127,255,0,.1);border:1px solid rgba(127,255,0,.2);color:var(--v)}
+.tag.over{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.2);color:var(--amb)}
+.tag.under{background:rgba(56,189,248,.1);border:1px solid rgba(56,189,248,.2);color:var(--sky)}
+
+/* STATUS BAR */
+#statusbar{height:32px;flex-shrink:0;background:var(--s0);border-top:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-family:var(--mono);font-size:10px;color:var(--mu)}
+.sb-left,.sb-right{display:flex;align-items:center;gap:16px}
+.sb-dot{width:7px;height:7px;border-radius:50%;background:var(--v);box-shadow:0 0 6px var(--v);display:inline-block;margin-right:5px;animation:sbPulse 1.8s ease-in-out infinite}
+@keyframes sbPulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+/* TOAST */
+#toast{position:fixed;bottom:44px;right:20px;z-index:999;background:var(--s1);border:1px solid rgba(127,255,0,.35);border-radius:8px;padding:10px 16px;font-family:var(--mono);font-size:11px;color:var(--v);box-shadow:0 8px 28px rgba(0,0,0,.5);transform:translateY(80px);opacity:0;transition:transform .4s cubic-bezier(.34,1.56,.64,1),opacity .3s;max-width:300px;display:flex;align-items:center;gap:8px}
+#toast.show{transform:translateY(0);opacity:1}
+
+/* MANUAL TRADER FORM */
+.mt-form{background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:24px}
+.mt-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px}
+.form-select{width:100%;background:var(--s0);border:1px solid var(--b2);color:var(--tx);font-family:var(--mono);font-size:11px;border-radius:5px;padding:8px 10px;outline:none;cursor:pointer}
+.form-select:focus{border-color:var(--v)}
+.num-input{width:100%;background:var(--s0);border:1px solid var(--b2);color:var(--wh);font-family:var(--mono);font-size:13px;border-radius:5px;padding:8px 10px;outline:none}
+.num-input:focus{border-color:var(--v)}
+.trade-btns{display:flex;gap:10px}
+.trade-btn{flex:1;padding:12px;font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:2px;border:none;border-radius:6px;cursor:pointer;transition:all .2s}
+.trade-btn.rise{background:linear-gradient(135deg,var(--v),var(--v2));color:#000}
+.trade-btn.rise:hover{box-shadow:0 0 20px var(--vg)}
+.trade-btn.fall{background:linear-gradient(135deg,var(--red),#b91c1c);color:#fff}
+.trade-btn.fall:hover{box-shadow:0 0 20px rgba(244,63,94,.4)}
+.mt-note{font-family:var(--mono);font-size:9px;color:var(--mu);text-align:center;margin-top:10px}
+
+@media(max-width:900px){#sidebar{display:none}.stats-row{grid-template-columns:repeat(3,1fr)}.bot-grid{grid-template-columns:1fr}}
+@media(max-width:600px){.stats-row{grid-template-columns:repeat(2,1fr)}.hero-strip{grid-template-columns:1fr 1fr}.score-ring{display:none}}
+</style>
+</head>
+<body>
+<div id="bg-grid"></div>
+
+<!-- SVG ICON SPRITES -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-dash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-signal" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 20h.01M7 20v-4M12 20V10M17 20V4M22 20v-8"/></symbol>
+  <symbol id="i-trader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></symbol>
+  <symbol id="i-analysis" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18 9l-5 5-2-2-5 5"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="10" rx="2"/><path d="M12 11V7"/><circle cx="12" cy="5" r="2"/><path d="M8 15h.01M16 15h.01M8 19h8"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></symbol>
+  <symbol id="i-speed" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M7 16l4-4 4 4 4-6"/></symbol>
+  <symbol id="i-reports" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></symbol>
+  <symbol id="i-wallet" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12V8H6a2 2 0 01-2-2c0-1.1.9-2 2-2h12v4"/><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"/><path d="M18 12a2 2 0 000 4h4v-4h-4z"/></symbol>
+  <symbol id="i-refresh" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></symbol>
+  <symbol id="i-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></symbol>
+  <symbol id="i-export" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></symbol>
+  <symbol id="i-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18"/></symbol>
+  <symbol id="i-zin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M11 8v6M8 11h6"/></symbol>
+  <symbol id="i-zout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35M8 11h6"/></symbol>
+  <symbol id="i-link" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></symbol>
+  <symbol id="i-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 11-7.778 7.778 5.5 5.5 0 017.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/></symbol>
+  <symbol id="i-deriv" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/><path d="M8 12l3 3 5-5"/></symbol>
+</svg>
+
+<!-- ══════════════════════════════════════
+     LOGIN OVERLAY
+══════════════════════════════════════ -->
+<div id="login-overlay">
+  <div class="login-box">
+    <div class="login-logo">
+      <svg width="38" height="38" viewBox="0 0 36 36" fill="none">
+        <defs>
+          <radialGradient id="vg2" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#7fff00"/><stop offset="100%" stop-color="#3a8000"/></radialGradient>
+          <filter id="glow2"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <ellipse cx="18" cy="17" rx="13" ry="14" fill="url(#vg2)" filter="url(#glow2)" opacity=".9"/>
+        <path d="M9 13 L13 11 L15 15 L11 16 Z" fill="#000"/>
+        <path d="M27 13 L23 11 L21 15 L25 16 Z" fill="#000"/>
+        <path d="M15.5 20 Q18 25 20.5 20" stroke="#000" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M13 20 L14.5 22 L16 20 L17.5 22 L19 20 L20.5 22 L22 20 L23.5 22 L25 20" stroke="#000" stroke-width="1" fill="none"/>
+      </svg>
+      <div>
+        <div class="login-title">VENOM</div>
+        <div class="login-sub">Deriv Signal Platform</div>
+      </div>
+    </div>
+
+    <div class="login-heading">Sign in to your account</div>
+    <div class="login-desc">Enter your Deriv credentials to access<br>live volatility signals and market analysis.</div>
+
+    <div class="login-error" id="login-error"></div>
+
+    <div class="form-group">
+      <label class="form-label" for="login-email">
+        <svg width="10" height="10" style="margin-right:4px"><use href="#i-user"/></svg>Email Address
+      </label>
+      <input class="form-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label" for="login-pass">
+        <svg width="10" height="10" style="margin-right:4px"><use href="#i-key"/></svg>Password
+      </label>
+      <input class="form-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    </div>
+
+    <button class="login-btn" id="login-submit-btn" onclick="doLogin()">
+      <span id="login-btn-text">SIGN IN</span>
+    </button>
+
+    <div class="login-divider"><span>OR</span></div>
+
+    <button class="oauth-btn" onclick="doDerivOAuth()">
+      <svg width="16" height="16"><use href="#i-deriv"/></svg>
+      Continue with Deriv OAuth
+    </button>
+
+    <div class="login-footer">
+      Don't have a Deriv account?
+      <a href="https://deriv.com/signup/" target="_blank">Create one free</a><br>
+      By signing in you agree to our
+      <a href="#" onclick="return false">Terms of Service</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════
+     MAIN APP
+══════════════════════════════════════ -->
+<div id="app">
+
+  <!-- HEADER -->
+  <div id="hdr">
+    <div class="logo-area">
+      <svg width="32" height="32" viewBox="0 0 36 36" fill="none">
+        <defs>
+          <radialGradient id="vg3" cx="50%" cy="40%" r="60%"><stop offset="0%" stop-color="#7fff00"/><stop offset="100%" stop-color="#3a8000"/></radialGradient>
+          <filter id="glow3"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+        <ellipse cx="18" cy="17" rx="13" ry="14" fill="url(#vg3)" filter="url(#glow3)" opacity=".9"/>
+        <path d="M9 13 L13 11 L15 15 L11 16 Z" fill="#000"/>
+        <path d="M27 13 L23 11 L21 15 L25 16 Z" fill="#000"/>
+        <path d="M15.5 20 Q18 25 20.5 20" stroke="#000" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+        <path d="M13 20 L14.5 22 L16 20 L17.5 22 L19 20 L20.5 22 L22 20 L23.5 22 L25 20" stroke="#000" stroke-width="1" fill="none"/>
+      </svg>
+      <div>
+        <div class="logo-text">VENOM</div>
+        <div class="logo-sub">deriv signals</div>
+      </div>
+    </div>
+
+    <div class="hdr-mid">
+      <button class="hdr-link" onclick="switchTab('reports')">
+        <svg width="13" height="13"><use href="#i-reports"/></svg> Reports
+      </button>
+    </div>
+
+    <div class="hdr-right">
+      <div class="balance-box">
+        <svg width="14" height="14" style="color:var(--v)"><use href="#i-wallet"/></svg>
+        <select class="currency-sel" id="currency-sel"><option>USD</option><option>EUR</option><option>GBP</option></select>
+        <span class="balance-amt" id="hdr-balance">$ —</span>
+      </div>
+      <button class="dep-btn" onclick="alert('Connect your Deriv API token in Settings to enable deposits.')">DEPOSIT / WITHDRAW</button>
+      <button class="logout-btn" onclick="doLogout()">
+        <svg width="13" height="13"><use href="#i-logout"/></svg> <span id="user-name">Sign Out</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- NAV -->
+  <div id="nav">
+    <button class="nav-item active" id="nav-dashboard" onclick="switchTab('dashboard')">
+      <svg width="13" height="13"><use href="#i-dash"/></svg> Dashboard
+    </button>
+    <button class="nav-item" id="nav-signals" onclick="switchTab('signals')">
+      <svg width="13" height="13"><use href="#i-signal"/></svg> Signal Scanner
+    </button>
+    <button class="nav-item" id="nav-manual" onclick="switchTab('manual')">
+      <svg width="13" height="13"><use href="#i-trader"/></svg> Manual Trader
+    </button>
+    <button class="nav-item" id="nav-analysis" onclick="switchTab('analysis')">
+      <svg width="13" height="13"><use href="#i-analysis"/></svg> Analysis Tools
+    </button>
+    <button class="nav-item" id="nav-bots" onclick="switchTab('bots')">
+      <svg width="13" height="13"><use href="#i-bot"/></svg> Free Bots
+    </button>
+    <button class="nav-item" id="nav-copy" onclick="switchTab('copy')">
+      <svg width="13" height="13"><use href="#i-copy"/></svg> Copy Trader
+    </button>
+    <button class="nav-item" id="nav-speedbot" onclick="switchTab('speedbot')">
+      <svg width="13" height="13"><use href="#i-speed"/></svg> Speedbot
+    </button>
+    <button class="nav-item" id="nav-chart" onclick="switchTab('chart')">
+      <svg width="13" height="13"><use href="#i-chart"/></svg> Chart
+    </button>
+  </div>
+
+  <!-- BODY -->
+  <div id="body-wrap">
+
+    <!-- SIDEBAR -->
+    <div id="sidebar">
+      <div class="sb-sec">Navigation</div>
+      <button class="sb-item active" id="sb-dashboard" onclick="switchTab('dashboard')"><svg width="13" height="13"><use href="#i-dash"/></svg> Dashboard</button>
+      <button class="sb-item" id="sb-signals" onclick="switchTab('signals')"><svg width="13" height="13"><use href="#i-signal"/></svg> Signal Scanner</button>
+      <button class="sb-item" id="sb-analysis" onclick="switchTab('analysis')"><svg width="13" height="13"><use href="#i-analysis"/></svg> Analysis Tools</button>
+      <button class="sb-item" id="sb-manual" onclick="switchTab('manual')"><svg width="13" height="13"><use href="#i-trader"/></svg> Manual Trader</button>
+
+      <div class="sb-div"></div>
+      <div class="sb-sec">Market Status</div>
+      <div id="sb-markets"></div>
+
+      <div class="sb-div"></div>
+      <div class="sb-sec">Tools</div>
+      <button class="sb-item" id="sb-bots" onclick="switchTab('bots')"><svg width="13" height="13"><use href="#i-bot"/></svg> Free Bots</button>
+      <button class="sb-item" id="sb-copy" onclick="switchTab('copy')"><svg width="13" height="13"><use href="#i-copy"/></svg> Copy Trader</button>
+      <button class="sb-item" id="sb-chart" onclick="switchTab('chart')"><svg width="13" height="13"><use href="#i-chart"/></svg> Chart</button>
+      <button class="sb-item" id="sb-speedbot" onclick="switchTab('speedbot')"><svg width="13" height="13"><use href="#i-speed"/></svg> Speedbot</button>
+
+      <div class="sb-div"></div>
+      <div class="sb-sec">Settings</div>
+      <button class="sb-item"><svg width="13" height="13"><use href="#i-bell"/></svg> Notifications</button>
+      <button class="sb-item"><svg width="13" height="13"><use href="#i-settings"/></svg> Preferences</button>
+      <button class="sb-item"><svg width="13" height="13"><use href="#i-link"/></svg> API Connect</button>
+    </div>
+
+    <!-- MAIN -->
+    <div id="main">
+      <!-- Toolbar -->
+      <div id="toolbar">
+        <button class="tb-btn" title="Refresh" onclick="this.style.color='var(--v)';setTimeout(()=>this.style.color='',600)"><svg width="13" height="13"><use href="#i-refresh"/></svg></button>
+        <button class="tb-btn" title="Settings"><svg width="13" height="13"><use href="#i-settings"/></svg></button>
+        <button class="tb-btn" title="Export"><svg width="13" height="13"><use href="#i-export"/></svg></button>
+        <button class="tb-btn" title="Notifications"><svg width="13" height="13"><use href="#i-bell"/></svg></button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" title="Chart" onclick="switchTab('chart')"><svg width="13" height="13"><use href="#i-chart"/></svg></button>
+        <button class="tb-btn" title="Table"><svg width="13" height="13"><use href="#i-table"/></svg></button>
+        <div class="tb-sep"></div>
+        <button class="tb-btn" title="Zoom in"><svg width="13" height="13"><use href="#i-zin"/></svg></button>
+        <button class="tb-btn" title="Zoom out"><svg width="13" height="13"><use href="#i-zout"/></svg></button>
+        <div style="flex:1"></div>
+        <span style="font-family:var(--mono);font-size:10px;color:var(--mu)">Last updated: <span id="last-update">—</span></span>
+      </div>
+
+      <!-- TAB: DASHBOARD -->
+      <div id="tab-dashboard" style="display:block">
+        <div id="dash">
+          <div class="hero-strip">
+            <div class="hero-block">
+              <div class="hero-lbl">Best Market</div>
+              <div class="hero-val" id="hero-mkt">—</div>
+            </div>
+            <div class="hero-block">
+              <div class="hero-lbl">Active Signal</div>
+              <div class="hero-sig" id="hero-sig">Scanning...</div>
+              <div class="hero-meta" id="hero-meta">Waiting for data</div>
+            </div>
+            <div class="hero-block">
+              <div class="hero-lbl">Distribution</div>
+              <div style="margin-top:4px">
+                <div style="display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;margin-bottom:4px">
+                  <span style="color:var(--sky)" id="hero-under">UNDER —</span>
+                  <span style="color:var(--red)" id="hero-over">OVER —</span>
+                </div>
+                <div style="height:5px;background:var(--b);border-radius:3px;overflow:hidden">
+                  <div id="hero-oubar" style="height:100%;width:50%;background:linear-gradient(90deg,var(--sky),var(--red));border-radius:3px;transition:width .7s"></div>
+                </div>
+              </div>
+              <div class="hero-meta" id="hero-ticks" style="margin-top:5px">0 ticks analyzed</div>
+            </div>
+            <div class="score-ring">
+              <div class="score-num" id="hero-score">0</div>
+              <div class="score-lbl">SCORE</div>
+            </div>
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-tile"><div class="st-ico"><svg width="18" height="18"><use href="#i-link"/></svg></div><div class="st-lbl">Connected</div><div class="st-val g" id="st-conn">0/5</div><div class="st-sub">markets live</div></div>
+            <div class="stat-tile"><div class="st-ico"><svg width="18" height="18"><use href="#i-activity"/></svg></div><div class="st-lbl">Active Signals</div><div class="st-val a" id="st-sigs">0</div><div class="st-sub">firing now</div></div>
+            <div class="stat-tile"><div class="st-ico"><svg width="18" height="18"><use href="#i-analysis"/></svg></div><div class="st-lbl">Best Score</div><div class="st-val sk" id="st-score">0</div><div class="st-sub">confidence pts</div></div>
+            <div class="stat-tile"><div class="st-ico"><svg width="18" height="18"><use href="#i-target"/></svg></div><div class="st-lbl">Top Pick</div><div class="st-val w" id="st-top" style="font-size:14px">—</div><div class="st-sub">recommended</div></div>
+            <div class="stat-tile"><div class="st-ico"><svg width="18" height="18"><use href="#i-clock"/></svg></div><div class="st-lbl">Signals Today</div><div class="st-val g" id="st-today">0</div><div class="st-sub">this session</div></div>
+          </div>
+
+          <div class="sec-head"><div class="sec-title">Market Scanner</div><div class="sec-line"></div><div class="sec-tag">Volatility Indices · 50 tick window</div></div>
+          <div class="mkt-grid" id="mkt-grid"></div>
+
+          <div class="bot-grid">
+            <div class="panel">
+              <div class="panel-head">
+                <div class="panel-title">Digit Distribution — <span id="dist-mkt">Best Market</span></div>
+                <div class="panel-tag"><div class="live-dot"></div> LIVE</div>
+              </div>
+              <div class="panel-body"><div class="d-dist" id="digit-dist"></div></div>
+            </div>
+            <div class="panel">
+              <div class="panel-head"><div class="panel-title">Signal History</div><div class="panel-tag" id="hist-cnt">0 signals</div></div>
+              <div class="panel-body" id="sig-hist-body"><div style="font-family:var(--mono);font-size:10px;color:var(--mu)">No signals yet...</div></div>
+            </div>
+          </div>
+
+          <div class="sec-head"><div class="sec-title">Signal Log</div><div class="sec-line"></div><div class="sec-tag">Real-time</div></div>
+          <div class="panel" style="margin-bottom:16px">
+            <div class="panel-body" style="padding:0;max-height:220px">
+              <table class="tbl">
+                <thead><tr><th>TIME</th><th>MARKET</th><th>SIGNAL</th><th>UNDER %</th><th>OVER %</th><th>HOT</th><th>COLD</th><th>SCORE</th></tr></thead>
+                <tbody id="trade-log-body"><tr><td colspan="8" style="text-align:center;color:var(--mu);padding:20px;font-family:var(--mono);font-size:10px">Waiting for signals...</td></tr></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- TAB: SIGNAL SCANNER -->
+      <div id="tab-signals" style="display:none;padding:20px">
+        <div style="background:var(--s1);border:1px solid var(--b);border-radius:10px;padding:40px;text-align:center">
+          <svg width="36" height="36" style="color:var(--v);display:block;margin:0 auto 16px"><use href="#i-signal"/></svg>
+          <div style="font-family:var(--disp);font-size:13px;color:var(--wh);margin-bottom:8px;letter-spacing:2px">SIGNAL SCANNER</div>
+          <div style="font-family:var(--mono);font-size:11px;color:var(--mu)">All live signals are shown on the Dashboard tab across all 5 volatility markets.</div>
+        </div>
+      </div>
+
+      <!-- TAB: MANUAL TRADER -->
+      <div id="tab-manual" style="display:none;padding:20px">
+        <div class="mt-form">
+          <div style="font-family:var(--disp);font-size:11px;color:var(--v);letter-spacing:2px;margin-bottom:16px;display:flex;align-items:center;gap:8px">
+            <svg width="14" height="14"><use href="#i-trader"/></svg> MANUAL TRADE PANEL
+          </div>
+          <div class="mt-grid">
+            <div>
+              <label class="form-label">Market</label>
+              <select class="form-select">
+                <option>Volatility 10 (1s) Index</option><option>Volatility 25 (1s) Index</option>
+                <option>Volatility 50 (1s) Index</option><option>Volatility 75 (1s) Index</option>
+                <option>Volatility 100 (1s) Index</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Trade Type</label>
+              <select class="form-select"><option>Rise / Fall</option><option>Over / Under</option><option>Matches / Differs</option></select>
+            </div>
+            <div>
+              <label class="form-label">Stake (USD)</label>
+              <input type="number" value="1.00" class="num-input"/>
+            </div>
+            <div>
+              <label class="form-label">Duration (Ticks)</label>
+              <input type="number" value="5" class="num-input"/>
+            </div>
+          </div>
+          <div class="trade-btns">
+            <button class="trade-btn rise" onclick="alert('Connect your Deriv API token in Settings to place trades.')">RISE</button>
+            <button class="trade-btn fall" onclick="alert('Connect your Deriv API token in Settings to place trades.')">FALL</button>
+          </div>
+          <div class="mt-note">Connect your Deriv API token in Settings to enable live trading.</div>
+        </div>
+      </div>
+
+      <!-- OTHER TABS -->
+      <div id="tab-analysis" style="display:none;padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--mu)">Analysis Tools — Coming Soon</div>
+      <div id="tab-bots" style="display:none;padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--mu)">Free Bots — Coming Soon</div>
+      <div id="tab-copy" style="display:none;padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--mu)">Copy Trader — Coming Soon</div>
+      <div id="tab-speedbot" style="display:none;padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--mu)">Speedbot — Coming Soon</div>
+      <div id="tab-chart" style="display:none;padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--mu)">Chart View — Coming Soon</div>
+      <div id="tab-reports" style="display:none;padding:40px;text-align:center;font-family:var(--mono);font-size:11px;color:var(--mu)">Reports — Coming Soon</div>
+    </div>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div id="statusbar">
+    <div class="sb-left">
+      <span style="display:flex;align-items:center"><span class="sb-dot"></span><span style="color:var(--v);font-weight:600">LIVE</span></span>
+      <span><span id="sb-conn">0</span>/5 markets connected</span>
+      <span>Signals: <span style="color:var(--v)" id="sb-sigs">0</span></span>
+      <span>Best: <span style="color:var(--v)" id="sb-best">—</span></span>
+    </div>
+    <div class="sb-right">
+      <span>© 2026 Venom Signals</span>
+      <span id="sb-clock">--:--:--</span>
+      <span style="color:var(--v)">v1.0.0</span>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div id="toast">
+  <svg width="12" height="12" style="flex-shrink:0"><use href="#i-signal"/></svg>
+  <span id="toast-msg"></span>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  AUTH
+// ══════════════════════════════════════
+const SESSION_KEY = 'venom_session';
+
+function doLogin() {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  const btn   = document.getElementById('login-submit-btn');
+  const btnTx = document.getElementById('login-btn-text');
+
+  errEl.style.display = 'none';
+
+  if (!email || !pass) {
+    errEl.textContent = 'Please enter your email and password.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (!email.includes('@')) {
+    errEl.textContent = 'Please enter a valid email address.';
+    errEl.style.display = 'block';
+    return;
+  }
+  if (pass.length < 6) {
+    errEl.textContent = 'Password must be at least 6 characters.';
+    errEl.style.display = 'block';
+    return;
+  }
+
+  btn.disabled = true;
+  btnTx.innerHTML = '<span class="spin">◌</span> Signing in...';
+
+  // Simulate auth check (replace with real API call if needed)
+  setTimeout(() => {
+    const session = { email, name: email.split('@')[0], ts: Date.now() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    launchApp(session);
+  }, 1200);
+}
+
+function doDerivOAuth() {
+  // Opens Deriv's real OAuth page — replace YOUR_APP_ID with your Deriv app ID
+  const APP_ID = '33mZo1nXizilnhTUWH6sr';
+  const redirect = encodeURIComponent(window.location.href.split('?')[0]);
+  window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&redirect_uri=${redirect}`;
+}
+
+function doLogout() {
+  sessionStorage.removeItem(SESSION_KEY);
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('login-overlay').style.display = 'flex';
+  if (window._es) { window._es.close(); window._es = null; }
+}
+
+function launchApp(session) {
+  document.getElementById('login-overlay').style.display = 'none';
+  document.getElementById('app').style.display = 'flex';
+  document.getElementById('user-name').textContent = session.name || 'Sign Out';
+  buildCards();
+  buildSidebar();
+  connect();
+}
+
+// Check for existing session or OAuth callback on load
+window.addEventListener('DOMContentLoaded', () => {
+  // Handle Deriv OAuth callback (?token1=...)
+  const params = new URLSearchParams(window.location.search);
+  if (params.has('token1')) {
+    const token = params.get('token1');
+    const session = { email: 'deriv-user', name: 'Deriv User', token, ts: Date.now() };
+    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    window.history.replaceState({}, '', window.location.pathname);
+    launchApp(session);
+    return;
+  }
+  // Restore existing session
+  const stored = sessionStorage.getItem(SESSION_KEY);
+  if (stored) {
+    try { launchApp(JSON.parse(stored)); return; } catch(e) {}
+  }
+  // Show login
+  document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
+  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+});
+
+// ══════════════════════════════════════
+//  APP LOGIC
+// ══════════════════════════════════════
+const MARKETS = ['R_10','R_25','R_50','R_75','R_100'];
+const sigHistory = [], tradeLog = [], prevSignals = {};
+let totalSigsToday = 0;
+
+function tickClock() {
+  const t = new Date().toLocaleTimeString();
+  document.getElementById('sb-clock').textContent = t;
+  const lu = document.getElementById('last-update');
+  if (lu) lu.textContent = t;
+}
+setInterval(tickClock, 1000); tickClock();
+
+function switchTab(name) {
+  document.querySelectorAll('[id^="tab-"]').forEach(el => el.style.display = 'none');
+  const el = document.getElementById('tab-' + name);
+  if (el) el.style.display = 'block';
+  // Update nav buttons
+  ['dashboard','signals','manual','analysis','bots','copy','speedbot','chart','reports'].forEach(t => {
+    const nb = document.getElementById('nav-' + t);
+    const sb = document.getElementById('sb-' + t);
+    if (nb) nb.classList.toggle('active', t === name);
+    if (sb) sb.classList.toggle('active', t === name);
+  });
+}
+
+function buildCards() {
+  const grid = document.getElementById('mkt-grid');
+  if (!grid) return;
+  grid.innerHTML = '';
+  MARKETS.forEach(m => {
+    const digs = [0,1,2,3,4,5,6,7,8,9].map(d =>
+      `<div class="dc" id="dc-${m}-${d}"><div class="dc-n">${d}</div><div class="dc-p" id="dv-${m}-${d}">0%</div></div>`
+    ).join('');
+    grid.innerHTML += `
+    <div class="mcard" id="card-${m}">
+      <div class="mc-head">
+        <div class="mc-name">${m}</div>
+        <div class="mc-badge" id="badge-${m}">score: 0</div>
+      </div>
+      <div class="d-grid">${digs}</div>
+      <div class="ou-row">
+        <div class="ou-lbls">
+          <span class="ou-l u" id="under-${m}">UNDER 0%</span>
+          <span class="ou-l o" id="over-${m}">OVER 0%</span>
+        </div>
+        <div class="ou-track"><div class="ou-fill" id="fill-${m}" style="width:50%"></div></div>
+      </div>
+      <div class="mc-last" id="last-${m}">last digit: <strong>—</strong></div>
+      <div class="mc-sig" id="sig-${m}"></div>
+      <div class="mc-conn" id="conn-${m}">Connecting to ${m}...</div>
+    </div>`;
+  });
+}
+
+function buildSidebar() {
+  const sb = document.getElementById('sb-markets');
+  if (!sb) return;
+  sb.innerHTML = '';
+  MARKETS.forEach(m => {
+    sb.innerHTML += `
+    <div class="sb-mkt" id="sbm-${m}" onclick="document.getElementById('card-${m}').scrollIntoView({behavior:'smooth'})">
+      <div class="sb-mkt-top"><div class="sb-mkt-name">${m}</div><div class="sb-mkt-score" id="sbsc-${m}">score: 0</div></div>
+      <div class="sb-bar"><div class="sb-bar-fill" id="sbfill-${m}" style="width:50%"></div></div>
+      <div class="sb-mkt-sig" id="sbsig-${m}" style="display:none"></div>
+      <div class="sb-conn-lbl" id="sbconn-${m}">Connecting...</div>
+    </div>`;
+  });
+}
+
+let toastT;
+function showToast(msg) {
+  document.getElementById('toast-msg').textContent = msg;
+  const el = document.getElementById('toast');
+  el.classList.add('show');
+  clearTimeout(toastT);
+  toastT = setTimeout(() => el.classList.remove('show'), 4500);
+}
+
+function addHistory(market, signal, state) {
+  const now = new Date().toLocaleTimeString();
+  sigHistory.unshift({ time: now, market, signal });
+  if (sigHistory.length > 60) sigHistory.pop();
+  totalSigsToday++;
+  tradeLog.unshift({ time: now, mkt: market, sig: signal, under: state.under_pct, over: state.over_pct, hot: state.hot_digit, cold: state.cold_digit, score: state.score });
+  if (tradeLog.length > 100) tradeLog.pop();
+  renderHistory();
+  renderTradeLog();
+}
+
+function renderHistory() {
+  const cnt = document.getElementById('hist-cnt');
+  const td  = document.getElementById('st-today');
+  if (cnt) cnt.textContent = sigHistory.length + ' signals';
+  if (td)  td.textContent  = totalSigsToday;
+  const body = document.getElementById('sig-hist-body');
+  if (!body) return;
+  body.innerHTML = sigHistory.length
+    ? sigHistory.map(r => `<div class="sh-row"><span class="sh-time">${r.time}</span><span class="sh-mkt">${r.market}</span><span class="sh-sig">${r.signal}</span></div>`).join('')
+    : '<div style="font-family:var(--mono);font-size:10px;color:var(--mu)">No signals yet...</div>';
+}
+
+function renderTradeLog() {
+  const body = document.getElementById('trade-log-body');
+  if (!body || !tradeLog.length) return;
+  const tag = sig => {
+    if (sig.includes('OVER'))  return '<span class="tag over">OVER</span>';
+    if (sig.includes('UNDER')) return '<span class="tag under">UNDER</span>';
+    if (sig.includes('DIGIT')) return '<span class="tag rise">DIGIT</span>';
+    return '<span class="tag rise">SIGNAL</span>';
+  };
+  body.innerHTML = tradeLog.slice(0,20).map(r => `
+    <tr>
+      <td style="color:var(--mu)">${r.time}</td>
+      <td class="tl-mkt">${r.mkt}</td>
+      <td>${tag(r.sig)} <span style="font-family:var(--mono);font-size:9px;color:var(--amb)">${r.sig}</span></td>
+      <td style="color:var(--sky)">${r.under}%</td>
+      <td style="color:var(--red)">${r.over}%</td>
+      <td style="color:var(--amb)">${r.hot}</td>
+      <td style="color:var(--sky)">${r.cold}</td>
+      <td style="color:var(--v)">${r.score}</td>
+    </tr>`).join('');
+}
+
+function updateUI(data) {
+  if(data.account && data.account.balance != null) {
+    document.getElementById('hdr-balance').textContent = data.account.currency + ' ' + parseFloat(data.account.balance).toFixed(2);
+    document.getElementById('currency-sel').value = data.account.currency || 'USD';
+  }
+  const { markets, ranked } = data;
+  let connected = 0, sigCount = 0;
+
+  MARKETS.forEach(m => {
+    const s = markets[m];
+    if (!s.connected || s.total_ticks < 5) return;
+    connected++;
+    const connEl = document.getElementById(`conn-${m}`);
+    const sbconn = document.getElementById(`sbconn-${m}`);
+    if (connEl) connEl.style.display = 'none';
+    if (sbconn) sbconn.style.display = 'none';
+
+    const badge = document.getElementById(`badge-${m}`);
+    if (badge) { badge.textContent = `score: ${s.score}`; badge.className = 'mc-badge' + (s.score > 15 ? ' best-b' : s.score > 8 ? ' hot' : ''); }
+
+    const total = s.digit_counts.reduce((a,b) => a+b, 0) || 1;
+    s.digit_counts.forEach((cnt, d) => {
+      const cell = document.getElementById(`dc-${m}-${d}`);
+      const pctEl = document.getElementById(`dv-${m}-${d}`);
+      if (pctEl) pctEl.textContent = Math.round((cnt/total)*100) + '%';
+      if (cell) { cell.className = 'dc'; if(d===s.hot_digit) cell.classList.add('hot'); if(d===s.cold_digit) cell.classList.add('cold'); if(d===s.last_digit) cell.classList.add('last-d'); }
+    });
+
+    const u = document.getElementById(`under-${m}`), ov = document.getElementById(`over-${m}`), fill = document.getElementById(`fill-${m}`);
+    if (u) u.textContent = `UNDER ${s.under_pct}%`;
+    if (ov) ov.textContent = `OVER ${s.over_pct}%`;
+    if (fill) fill.style.width = s.under_pct + '%';
+
+    const lastEl = document.getElementById(`last-${m}`);
+    if (lastEl) lastEl.innerHTML = `last digit: <strong>${s.last_digit ?? '—'}</strong>`;
+
+    const sigEl = document.getElementById(`sig-${m}`);
+    if (sigEl) {
+      if (s.signal) { sigCount++; sigEl.style.display = 'block'; sigEl.textContent = s.signal; if (prevSignals[m] !== s.signal) { showToast(`${m}: ${s.signal}`); addHistory(m, s.signal, s); } }
+      else sigEl.style.display = 'none';
+    }
+    prevSignals[m] = s.signal || null;
+
+    const card = document.getElementById(`card-${m}`);
+    if (card) { card.className = 'mcard'; if(ranked[0]===m) card.classList.add('best'); else if(s.signal) card.classList.add('signalled'); }
+
+    const sbm = document.getElementById(`sbm-${m}`);
+    const sbsc = document.getElementById(`sbsc-${m}`);
+    const sbfill = document.getElementById(`sbfill-${m}`);
+    const sbsig = document.getElementById(`sbsig-${m}`);
+    if (sbsc) { sbsc.textContent = `score: ${s.score}`; sbsc.className = 'sb-mkt-score' + (s.score > 8 ? ' hot' : ''); }
+    if (sbfill) sbfill.style.width = s.under_pct + '%';
+    if (sbm) { sbm.className = 'sb-mkt'; if(ranked[0]===m) sbm.classList.add('sb-best'); else if(s.signal) sbm.classList.add('sb-sig'); }
+    if (sbsig) { if(s.signal){ sbsig.style.display='block'; sbsig.textContent=s.signal; } else sbsig.style.display='none'; }
+  });
+
+  const sc = document.getElementById('st-conn'), ss = document.getElementById('st-sigs'), sbc = document.getElementById('sb-conn'), sbs = document.getElementById('sb-sigs');
+  if (sc) sc.textContent = `${connected}/5`;
+  if (ss) ss.textContent = sigCount;
+  if (sbc) sbc.textContent = connected;
+  if (sbs) sbs.textContent = sigCount;
+
+  if (ranked.length) {
+    const best = ranked[0], bs = markets[best];
+    const set = (id, val) => { const el = document.getElementById(id); if(el) el.textContent = val; };
+    const setHtml = (id, val) => { const el = document.getElementById(id); if(el) el.innerHTML = val; };
+    set('hero-mkt', best);
+    set('hero-sig', bs.signal || '— Monitoring pattern —');
+    set('hero-meta', `Ticks: ${bs.total_ticks||0}  |  Hot: ${bs.hot_digit??'—'}  Cold: ${bs.cold_digit??'—'}`);
+    set('hero-under', `UNDER ${bs.under_pct||0}%`);
+    set('hero-over', `OVER ${bs.over_pct||0}%`);
+    set('hero-score', bs.score||0);
+    set('hero-ticks', `${bs.total_ticks||0} ticks analyzed`);
+    set('st-score', bs.score||0);
+    set('st-top', best);
+    set('sb-best', best);
+    set('dist-mkt', best);
+    
+    const ob = document.getElementById('hero-oubar');
+    if (ob) ob.style.width = (bs.under_pct||50) + '%';
+    const tc = bs.digit_counts || [], tot = tc.reduce((a,b)=>a+b,0)||1;
+    const dd = document.getElementById('digit-dist');
+    if (dd) dd.innerHTML = tc.map((cnt,i) => `<span class="dd-chip ${i===bs.hot_digit?'hot-d':i<=4?'low':'high'}">${i} &times; ${cnt} (${Math.round(cnt/tot*100)}%)</span>`).join('');
+  }
+}
+
+function connect() {
+  if (window._es) { window._es.close(); }
+  window._es = new EventSource('/api/stream');
+  window._es.onmessage = e => { try { updateUI(JSON.parse(e.data)); } catch(err) {} };
+  window._es.onerror = () => { window._es.close(); setTimeout(connect, 3000); };
+}
+</script>
+</body>
+</html>
