@@ -7,14 +7,13 @@ from flask import Flask, jsonify, Response, send_file
 from flask_cors import CORS
 from websocket import WebSocketApp
 
-APP_ID      = "33mZo1nXizilnhTUWH6sr"
-API_TOKEN   = "33mZo1nXizilnhTUWH6sr"
+APP_ID      = "1089"
 MARKETS     = ["R_10", "R_25", "R_50", "R_75", "R_100"]
 TICK_WINDOW = 50
 
-data_lock    = threading.Lock()
+data_lock   = threading.Lock()
 account_info = {"balance": None, "currency": "USD", "loginid": None}
-market_data  = {
+market_data = {
     m: {
         "connected": False,
         "ticks": deque(maxlen=TICK_WINDOW),
@@ -54,24 +53,24 @@ def analyze(market):
     score  = 0
     signal = None
     if u_pct >= 65:
-        signal = f"UNDER ({u_pct}%) | DIGIT {cold_d} DUE ({c_pct}%)"
+        signal = "UNDER ({}%) | DIGIT {} DUE ({}%)".format(u_pct, cold_d, c_pct)
         score += int(u_pct - 50) * 2
     elif o_pct >= 65:
-        signal = f"OVER ({o_pct}%) | DIGIT {hot_d} HOT ({h_pct}%)"
+        signal = "OVER ({}%) | DIGIT {} HOT ({}%)".format(o_pct, hot_d, h_pct)
         score += int(o_pct - 50) * 2
     if h_pct >= 25:
-        tag = f"DIGIT {hot_d} EVEN ({h_pct}%)"
+        tag = "DIGIT {} EVEN ({}%)".format(hot_d, h_pct)
         signal = (signal + " | " + tag) if signal else tag
         score += int(h_pct - 10) * 2
     if c_pct == 0:
-        tag = f"DIGIT {cold_d} DUE (0%)"
+        tag = "DIGIT {} DUE (0%)".format(cold_d)
         signal = (signal + " | " + tag) if signal else tag
         score += 20
     state["signal"] = signal
     state["score"]  = score
 
 def run_market(market):
-    url = f"wss://ws.derivws.com/websockets/v3?app_id={APP_ID}"
+    url = "wss://ws.derivws.com/websockets/v3?app_id={}".format(APP_ID)
     def on_open(ws):
         ws.send(json.dumps({"ticks": market, "subscribe": 1}))
     def on_message(ws, msg):
@@ -99,35 +98,16 @@ def run_market(market):
     WebSocketApp(url, on_open=on_open, on_message=on_message,
                  on_error=on_error, on_close=on_close).run_forever()
 
-def fetch_balance():
-    import websocket as ws_lib
-    try:
-        ws = ws_lib.create_connection(
-            f"wss://ws.derivws.com/websockets/v3?app_id={APP_ID}")
-        ws.send(json.dumps({"authorize": API_TOKEN}))
-        resp = json.loads(ws.recv())
-        if resp.get("msg_type") == "authorize":
-            auth = resp["authorize"]
-            with data_lock:
-                account_info["balance"]  = auth.get("balance")
-                account_info["currency"] = auth.get("currency", "USD")
-                account_info["loginid"]  = auth.get("loginid")
-        ws.close()
-    except Exception as e:
-        print(f"Balance fetch error: {e}")
-
 def get_best_market():
     with data_lock:
         connected = [m for m in MARKETS if market_data[m]["connected"]]
         return sorted(connected, key=lambda m: market_data[m]["score"], reverse=True)
 
 def start_scanner():
-    threading.Thread(target=fetch_balance, daemon=True).start()
     for market in MARKETS:
         threading.Thread(target=run_market, args=(market,), daemon=True).start()
     while True:
         time.sleep(60)
-        threading.Thread(target=fetch_balance, daemon=True).start()
 
 app = Flask(__name__)
 CORS(app)
@@ -142,11 +122,6 @@ def health():
     connected = sum(1 for m in MARKETS if market_data[m]["connected"])
     return jsonify({"status": "ok", "markets_connected": connected})
 
-@app.route("/api/account")
-def api_account():
-    with data_lock:
-        return jsonify(account_info)
-
 @app.route("/api/markets")
 def api_markets():
     result = {}
@@ -157,4 +132,44 @@ def api_markets():
                 "connected":    s["connected"],
                 "last_digit":   s.get("last_digit"),
                 "signal":       s.get("signal"),
-                "score":        s.g
+                "score":        s.get("score", 0),
+                "under_pct":    s.get("under_pct", 0),
+                "over_pct":     s.get("over_pct", 0),
+                "hot_digit":    s.get("hot_digit"),
+                "cold_digit":   s.get("cold_digit"),
+                "hot_pct":      s.get("hot_pct", 0),
+                "cold_pct":     s.get("cold_pct", 0),
+                "total_ticks":  s.get("total_ticks", 0),
+                "digit_counts": list(s["digit_counts"]),
+            }
+    return jsonify({"markets": result, "ranked": get_best_market()})
+
+@app.route("/api/stream")
+def api_stream():
+    def event_stream():
+        while True:
+            result = {}
+            with data_lock:
+                for market in MARKETS:
+                    s = market_data[market]
+                    result[market] = {
+                        "connected":    s["connected"],
+                        "last_digit":   s.get("last_digit"),
+                        "signal":       s.get("signal"),
+                        "score":        s.get("score", 0),
+                        "under_pct":    s.get("under_pct", 0),
+                        "over_pct":     s.get("over_pct", 0),
+                        "hot_digit":    s.get("hot_digit"),
+                        "cold_digit":   s.get("cold_digit"),
+                        "total_ticks":  s.get("total_ticks", 0),
+                        "digit_counts": list(s["digit_counts"]),
+                    }
+            ranked = get_best_market()
+            payload = json.dumps({"markets": result, "ranked": ranked, "account": account_info})
+            yield "data: {}\n\n".format(payload)
+            time.sleep(2)
+    return Response(event_stream(), mimetype="text/event-stream",
+                    headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+
+if __name__ == "__main__":
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False, threaded=True)
