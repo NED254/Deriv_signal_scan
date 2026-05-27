@@ -331,40 +331,40 @@ body{background:var(--bg);color:var(--tx);font-family:var(--body);font-size:13px
       </div>
     </div>
 
-    <div class="login-heading">Sign in to your account</div>
-    <div class="login-desc">Enter your Deriv credentials to access<br>live volatility signals and market analysis.</div>
+    <div class="login-heading">Sign in to Venom Signals</div>
+    <div class="login-desc">Connect your Deriv account to access live<br>signals, real balance and live trading.</div>
 
     <div class="login-error" id="login-error"></div>
 
     <div class="form-group">
-      <label class="form-label" for="login-email">
-        <svg width="10" height="10" style="margin-right:4px"><use href="#i-user"/></svg>Email Address
+      <label class="form-label" for="login-token">
+        <svg width="10" height="10" style="margin-right:4px"><use href="#i-key"/></svg>Deriv API Token
       </label>
-      <input class="form-input" id="login-email" type="email" placeholder="your@email.com" autocomplete="email"/>
+      <input class="form-input" id="login-token" type="text" placeholder="Paste your API token here..." autocomplete="off"/>
     </div>
-    <div class="form-group">
-      <label class="form-label" for="login-pass">
-        <svg width="10" height="10" style="margin-right:4px"><use href="#i-key"/></svg>Password
-      </label>
-      <input class="form-input" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    <div style="background:rgba(127,255,0,0.05);border:1px solid rgba(127,255,0,0.15);border-radius:6px;padding:10px 12px;margin-bottom:12px">
+      <div style="font-family:var(--mono);font-size:9px;color:var(--mu);line-height:1.7">
+        1. Go to <a href="https://app.deriv.com/account/api-token" target="_blank" style="color:var(--v)">app.deriv.com/account/api-token</a><br>
+        2. Create a token with <strong style="color:var(--tx)">Read</strong> and <strong style="color:var(--tx)">Trade</strong> permissions<br>
+        3. Copy and paste it above
+      </div>
     </div>
 
     <button class="login-btn" id="login-submit-btn" onclick="doLogin()">
-      <span id="login-btn-text">SIGN IN</span>
+      <span id="login-btn-text">CONNECT ACCOUNT</span>
     </button>
 
     <div class="login-divider"><span>OR</span></div>
 
     <button class="oauth-btn" onclick="doDerivOAuth()">
       <svg width="16" height="16"><use href="#i-deriv"/></svg>
-      Continue with Deriv OAuth
+      Login with Deriv Account
     </button>
 
     <div class="login-footer">
       Don't have a Deriv account?
       <a href="https://deriv.com/signup/" target="_blank">Create one free</a><br>
-      By signing in you agree to our
-      <a href="#" onclick="return false">Terms of Service</a>
+      Your token is used only to connect your account — never stored.
     </div>
   </div>
 </div>
@@ -641,62 +641,87 @@ body{background:var(--bg);color:var(--tx);font-family:var(--body);font-size:13px
 const SESSION_KEY = 'venom_session';
 
 function doLogin() {
-  const email = document.getElementById('login-email').value.trim();
-  const pass  = document.getElementById('login-pass').value;
+  const token = document.getElementById('login-token').value.trim();
   const errEl = document.getElementById('login-error');
   const btn   = document.getElementById('login-submit-btn');
   const btnTx = document.getElementById('login-btn-text');
 
   errEl.style.display = 'none';
 
-  if (!email || !pass) {
-    errEl.textContent = 'Please enter your email and password.';
+  if (!token) {
+    errEl.textContent = 'Please paste your Deriv API token.';
     errEl.style.display = 'block';
     return;
   }
-  if (!email.includes('@')) {
-    errEl.textContent = 'Please enter a valid email address.';
-    errEl.style.display = 'block';
-    return;
-  }
-  if (pass.length < 6) {
-    errEl.textContent = 'Password must be at least 6 characters.';
+  if (token.length < 10) {
+    errEl.textContent = 'Invalid token — please check and try again.';
     errEl.style.display = 'block';
     return;
   }
 
   btn.disabled = true;
-  btnTx.innerHTML = '<span class="spin">◌</span> Signing in...';
+  btnTx.innerHTML = '<span class="spin">◌</span> Connecting...';
 
-  // Simulate auth check (replace with real API call if needed)
-  setTimeout(() => {
-    const session = { email, name: email.split('@')[0], ts: Date.now() };
+  // Verify token via Deriv WebSocket
+  const ws = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+  ws.onopen = () => ws.send(JSON.stringify({ authorize: token }));
+  ws.onmessage = (e) => {
+    const data = JSON.parse(e.data);
+    ws.close();
+    if (data.error) {
+      btn.disabled = false;
+      btnTx.textContent = 'CONNECT ACCOUNT';
+      errEl.textContent = 'Invalid token: ' + data.error.message;
+      errEl.style.display = 'block';
+      return;
+    }
+    const auth = data.authorize;
+    const session = {
+      token,
+      name:     auth.fullname || auth.email || 'Trader',
+      email:    auth.email,
+      balance:  auth.balance,
+      currency: auth.currency,
+      loginid:  auth.loginid,
+      ts:       Date.now()
+    };
     sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
     launchApp(session);
-  }, 1200);
+  };
+  ws.onerror = () => {
+    btn.disabled = false;
+    btnTx.textContent = 'CONNECT ACCOUNT';
+    errEl.textContent = 'Connection failed — check your internet and try again.';
+    errEl.style.display = 'block';
+  };
 }
 
 function doDerivOAuth() {
-  // Opens Deriv's real OAuth page — replace YOUR_APP_ID with your Deriv app ID
   const APP_ID = '33mZo1nXizilnhTUWH6sr';
-  const redirect = encodeURIComponent(window.location.href.split('?')[0]);
-  window.location.href = `https://oauth.deriv.com/oauth2/authorize?app_id=${APP_ID}&redirect_uri=${redirect}`;
+  const redirect = encodeURIComponent('https://deriv-signal-scanner.onrender.com/callback');
+  window.location.href = 'https://oauth.deriv.com/oauth2/authorize?app_id=' + APP_ID + '&redirect_uri=' + redirect + '&scope=read,trade,admin';
 }
 
 function doLogout() {
   sessionStorage.removeItem(SESSION_KEY);
+  window._userToken = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('login-overlay').style.display = 'flex';
   if (window._es) { window._es.close(); window._es = null; }
+  if (window._balWs) { window._balWs.close(); window._balWs = null; }
+  document.getElementById('login-token').value = '';
 }
 
 function launchApp(session) {
   document.getElementById('login-overlay').style.display = 'none';
   document.getElementById('app').style.display = 'flex';
   document.getElementById('user-name').textContent = session.name || 'Sign Out';
+  if (session.balance != null) {
+    document.getElementById('hdr-balance').textContent = (session.currency || 'USD') + ' ' + parseFloat(session.balance).toFixed(2);
+  }
   buildCards();
   buildSidebar();
-  connect();
+  connect(session.token);
 }
 
 // Check for existing session or OAuth callback on load
@@ -717,8 +742,7 @@ window.addEventListener('DOMContentLoaded', () => {
     try { launchApp(JSON.parse(stored)); return; } catch(e) {}
   }
   // Show login
-  document.getElementById('login-email').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('login-pass').focus(); });
-  document.getElementById('login-pass').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
+  document.getElementById('login-token').addEventListener('keydown', e => { if(e.key==='Enter') doLogin(); });
 });
 
 // ══════════════════════════════════════
@@ -933,11 +957,36 @@ function updateUI(data) {
   }
 }
 
-function connect() {
+function connect(token) {
+  if (window._userToken) token = window._userToken;
+  if (token) window._userToken = token;
   if (window._es) { window._es.close(); }
   window._es = new EventSource('/api/stream');
   window._es.onmessage = e => { try { updateUI(JSON.parse(e.data)); } catch(err) {} };
-  window._es.onerror = () => { window._es.close(); setTimeout(connect, 3000); };
+  window._es.onerror = () => { window._es.close(); setTimeout(() => connect(), 3000); };
+
+  // Also subscribe to real balance updates via WebSocket
+  if (token && !window._balWs) {
+    window._balWs = new WebSocket('wss://ws.binaryws.com/websockets/v3?app_id=1089');
+    window._balWs.onopen = () => {
+      window._balWs.send(JSON.stringify({ authorize: token }));
+    };
+    window._balWs.onmessage = (e) => {
+      const d = JSON.parse(e.data);
+      if (d.msg_type === 'authorize') {
+        const a = d.authorize;
+        document.getElementById('hdr-balance').textContent = (a.currency || 'USD') + ' ' + parseFloat(a.balance).toFixed(2);
+        document.getElementById('currency-sel').value = a.currency || 'USD';
+        document.getElementById('user-name').textContent = a.fullname || a.email || 'Trader';
+        // Subscribe to balance stream
+        window._balWs.send(JSON.stringify({ balance: 1, subscribe: 1 }));
+      }
+      if (d.msg_type === 'balance') {
+        document.getElementById('hdr-balance').textContent = (d.balance.currency || 'USD') + ' ' + parseFloat(d.balance.balance).toFixed(2);
+      }
+    };
+    window._balWs.onerror = () => { window._balWs = null; };
+  }
 }
 </script>
 </body>
