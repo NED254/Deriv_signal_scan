@@ -3,11 +3,12 @@ import json
 import threading
 import time
 from collections import deque
-from flask import Flask, jsonify, Response, send_file
+from flask import Flask, jsonify, Response, send_file, request, redirect
 from flask_cors import CORS
 from websocket import WebSocketApp
+import websocket as ws_lib
 
-APP_ID      = "1089"
+APP_ID      = "33mZo1nXizilnhTUWH6sr"
 MARKETS     = ["R_10", "R_25", "R_50", "R_75", "R_100"]
 TICK_WINDOW = 50
 
@@ -116,6 +117,67 @@ threading.Thread(target=start_scanner, daemon=True).start()
 @app.route("/")
 def index():
     return send_file("dashboard.html")
+
+@app.route("/callback")
+def oauth_callback():
+    """Handle Deriv OAuth callback — get token1 and redirect to dashboard with session."""
+    token1 = request.args.get("token1", "")
+    token2 = request.args.get("token2", "")
+    acct1  = request.args.get("acct1", "")
+
+    if not token1:
+        return redirect("/?error=no_token")
+
+    # Verify token and get account info
+    name     = "Trader"
+    balance  = "0.00"
+    currency = "USD"
+    loginid  = acct1
+
+    try:
+        ws = ws_lib.create_connection(
+            "wss://ws.derivws.com/websockets/v3?app_id={}".format(APP_ID),
+            timeout=10
+        )
+        ws.send(json.dumps({"authorize": token1}))
+        resp = json.loads(ws.recv())
+        ws.close()
+        if resp.get("msg_type") == "authorize":
+            auth     = resp["authorize"]
+            name     = auth.get("fullname") or auth.get("email") or "Trader"
+            balance  = str(auth.get("balance", "0.00"))
+            currency = auth.get("currency", "USD")
+            loginid  = auth.get("loginid", acct1)
+    except Exception as e:
+        print("OAuth verify error:", e)
+
+    # Redirect to dashboard with token embedded in URL fragment (never hits server)
+    html = """<!DOCTYPE html>
+<html>
+<head><title>Connecting...</title></head>
+<body>
+<script>
+var session = {{
+  token: {token},
+  name: {name},
+  balance: {balance},
+  currency: {currency},
+  loginid: {loginid},
+  ts: Date.now()
+}};
+sessionStorage.setItem('venom_session', JSON.stringify(session));
+window.location.href = '/';
+</script>
+<p>Connecting your account...</p>
+</body>
+</html>""".format(
+        token=json.dumps(token1),
+        name=json.dumps(name),
+        balance=json.dumps(balance),
+        currency=json.dumps(currency),
+        loginid=json.dumps(loginid)
+    )
+    return html
 
 @app.route("/api/health")
 def health():
